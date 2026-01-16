@@ -96,6 +96,43 @@ from services.agent_runner import create_agent_api_router
 agent_router = create_agent_api_router()
 app.include_router(agent_router)
 
+# === Health Check ===
+@app.get("/api/health")
+def health_check():
+    """System health check with V2 pipeline status."""
+    from config import ENABLE_V2_AGENTS
+    from services.workspace_manager import WorkspaceManager
+    
+    # Count worktrees
+    worktree_count = 0
+    try:
+        wm = WorkspaceManager()
+        worktree_count = len(wm.list_workspaces())
+    except:
+        pass
+    
+    # Count skills
+    skill_count = 0
+    try:
+        from services.skill_manager import SkillManager
+        sm = SkillManager()
+        skill_count = len(sm.get_index())
+    except:
+        pass
+    
+    return {
+        "status": "healthy",
+        "version": "2.0",
+        "v2_enabled": ENABLE_V2_AGENTS,
+        "worktrees_active": worktree_count,
+        "skills_available": skill_count,
+        "endpoints": {
+            "board": "/api/board/tasks",
+            "agent": "/api/agent/run",
+            "factory": "/api/factory/run"
+        }
+    }
+
 # === Helper ===
 PROJECTS_DIR = BASE_DIR / "data" / "projects"
 
