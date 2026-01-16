@@ -91,6 +91,11 @@ app.add_middleware(
 from api.board import router as board_router
 app.include_router(board_router)
 
+# Agent Runner API
+from services.agent_runner import create_agent_api_router
+agent_router = create_agent_api_router()
+app.include_router(agent_router)
+
 # === Helper ===
 PROJECTS_DIR = BASE_DIR / "data" / "projects"
 
