@@ -2,6 +2,8 @@
 The Boss — Главный Оркестратор UZ AI Factory.
 Управляет агентами: Tech Lead, CMO, QA Lead.
 Интегрирован с Agent Builder RAG для обогащения контекста.
+
+V2: All agents now use Skills + Worktrees by default.
 """
 
 import json
@@ -16,14 +18,13 @@ sys.path.append(str(Path(__file__).parent.parent))
 from agents.tech_lead import TechLead
 from agents.cmo import CMO
 from agents.qa_lead import QALead
-from agents.cpo import CPO
+from agents.cpo import CPO  # Now points to CPOv2
 from agents.sales_head import SalesHead
-from config import BASE_DIR, ENABLE_V2_AGENTS
+from config import BASE_DIR, V2_ROLLOUT_PERCENTAGE, V2_MAX_PARALLEL_TASKS
 
-# V2 Services
-if ENABLE_V2_AGENTS:
-    from services.workspace_manager import WorkspaceManager
-    from services.agent_runner import AgentRunner
+# V2 Services (always available now)
+from services.workspace_manager import WorkspaceManager
+from services.agent_runner import AgentRunner
 
 # RAG Integration
 try:
@@ -61,9 +62,8 @@ class TheBoss:
         self.qa_lead = QALead()
         self.projects_dir = BASE_DIR / "data" / "projects"
         
-        # V2 Services
-        if ENABLE_V2_AGENTS:
-            self.workspace_manager = WorkspaceManager()
+        # V2 Services (always enabled)
+        self.workspace_manager = WorkspaceManager()
         
         # RAG Service
         self.search_service = get_search_service() if RAG_AVAILABLE else None
@@ -92,13 +92,9 @@ class TheBoss:
         # RAG: Enrich context with knowledge base
         enriched_context = self._enrich_context_with_rag(idea, context)
         
-        # === V2 PIPELINE (Vibe-Lite) ===
-        if ENABLE_V2_AGENTS:
-            print("\n🚀 V2 MODE: Using Git Worktrees & Agent Runner")
-            return self._run_v2_pipeline(idea, enriched_context)
-            
-        # === V1 PIPELINE (Legacy) ===
-        print("\n⚠️ V1 MODE: Using Legacy Pipeline")
+        # V2 PIPELINE (Git Worktrees + Agent Runner)
+        print("\n🚀 V2 MODE: Using Git Worktrees & Agent Runner")
+        return self._run_v2_pipeline(idea, enriched_context)
         
         # 1. Product Phase (CPO)
         print("\n🧠 PHASE 1: PRODUCT STRATEGY (CPO)")
