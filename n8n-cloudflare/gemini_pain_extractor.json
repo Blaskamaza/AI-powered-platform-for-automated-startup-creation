@@ -1,0 +1,76 @@
+{
+    "name": "AI Pain Extractor (Gemini)",
+    "nodes": [
+        {
+            "parameters": {},
+            "id": "2d3e4f5g-6h7i-8j9k-0l1m-2n3o4p5q6r7s",
+            "name": "Start Chat",
+            "type": "n8n-nodes-base.manualTrigger",
+            "typeVersion": 1,
+            "position": [
+                240,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "options": {}
+            },
+            "id": "3e4f5g6h-7i8j-9k0l-1m2n-3o4p5q6r7s8t",
+            "name": "Basic LLM Chain",
+            "type": "@n8n/n8n-nodes-langchain.chainLlm",
+            "typeVersion": 1.4,
+            "position": [
+                460,
+                300
+            ],
+            "notesInFlow": true,
+            "notes": "Анализирует идею"
+        },
+        {
+            "parameters": {
+                "modelName": "models/gemini-pro",
+                "options": {}
+            },
+            "id": "4f5g6h7i-8j9k-0l1m-2n3o-4p5q6r7s8t9u",
+            "name": "Google Gemini Chat Model",
+            "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+            "typeVersion": 1,
+            "position": [
+                460,
+                520
+            ],
+            "credentials": {
+                "googlePalmApi": {
+                    "id": "YOUR_CREDENTIAL_ID",
+                    "name": "Google Gemini Api"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "Start Chat": {
+            "main": [
+                [
+                    {
+                        "node": "Basic LLM Chain",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Google Gemini Chat Model": {
+            "ai_languageModel": [
+                [
+                    {
+                        "node": "Basic LLM Chain",
+                        "type": "ai_languageModel",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "pinData": {}
+}

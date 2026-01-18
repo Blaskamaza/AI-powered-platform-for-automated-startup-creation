@@ -1,0 +1,114 @@
+{
+    "name": "Groq Research Agent",
+    "nodes": [
+        {
+            "parameters": {},
+            "id": "start",
+            "name": "Start",
+            "type": "n8n-nodes-base.manualTrigger",
+            "typeVersion": 1,
+            "position": [
+                0,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.tavily.com/search",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={\n  \"api_key\": \"YOUR_TAVILY_API_KEY\",\n  \"query\": \"AI agents for business automation 2026\",\n  \"search_depth\": \"basic\",\n  \"include_answer\": true,\n  \"max_results\": 3\n}"
+            },
+            "id": "tavily",
+            "name": "Tavily Search",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [
+                220,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.groq.com/openai/v1/chat/completions",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer YOUR_GROQ_API_KEY"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={\n  \"model\": \"llama-3.1-8b-instant\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a research analyst. Analyze the search results and provide a concise summary in Russian.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Проанализируй результаты поиска и напиши краткий отчет:\\n\\n{{ JSON.stringify($json) }}\"\n    }\n  ],\n  \"temperature\": 0.3,\n  \"max_tokens\": 1024\n}"
+            },
+            "id": "groq",
+            "name": "Groq LLM (Llama 3.1)",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [
+                460,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "// Extract the response\nconst response = $input.first().json;\nconst content = response.choices?.[0]?.message?.content || 'No response';\n\nreturn [{\n  json: {\n    report: content,\n    model: response.model,\n    tokens_used: response.usage?.total_tokens || 0\n  }\n}];"
+            },
+            "id": "format",
+            "name": "Format Output",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                700,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Start": {
+            "main": [
+                [
+                    {
+                        "node": "Tavily Search",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Tavily Search": {
+            "main": [
+                [
+                    {
+                        "node": "Groq LLM (Llama 3.1)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Groq LLM (Llama 3.1)": {
+            "main": [
+                [
+                    {
+                        "node": "Format Output",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1"
+    }
+}

@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      # Core Settings
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=${WEBHOOK_URL:-http://localhost:5678}
+
+      # Security
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-n8n_password_change_me}
+
+      # Encryption Key (important for credentials)
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY:-your-encryption-key-min-32-chars}
+
+      # Timezone
+      - GENERIC_TIMEZONE=Asia/Tashkent
+      - TZ=Asia/Tashkent
+
+      # Community nodes
+      - N8N_COMMUNITY_PACKAGES_ENABLED=true
+
+      # API Key for MCP integration
+      - N8N_API_KEY=${N8N_API_KEY:-n8n_api_key_2026_secure}
+
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - n8n-network
+
+  # Cloudflare Tunnel
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    networks:
+      - n8n-network
+    depends_on:
+      - n8n
+
+  # SearxNG - FREE unlimited meta-search engine
+  searxng:
+    image: searxng/searxng:latest
+    container_name: searxng
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - SEARXNG_BASE_URL=http://localhost:8080
+      - SEARXNG_SECRET=${SEARXNG_SECRET:-searxng-secret-key-2026}
+    volumes:
+      - searxng_data:/etc/searxng
+    networks:
+      - n8n-network
+
+volumes:
+  n8n_data:
+  searxng_data:
+
+
+networks:
+  n8n-network:
+    driver: bridge

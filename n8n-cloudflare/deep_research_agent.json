@@ -1,0 +1,257 @@
+{
+    "name": "🔬 Deep Research Agent (Multi-Source)",
+    "nodes": [
+        {
+            "parameters": {},
+            "id": "manual-trigger",
+            "name": "▶️ Start",
+            "type": "n8n-nodes-base.manualTrigger",
+            "typeVersion": 1,
+            "position": [
+                0,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "// Input query for research\nreturn [{\n  json: {\n    query: \"AI agents for business automation 2026\",\n    sources: [\"tavily\", \"exa\", \"searxng\"]\n  }\n}];"
+            },
+            "id": "input-query",
+            "name": "📝 Research Query",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                200,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.tavily.com/search",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={\n  \"api_key\": \"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\",\n  \"query\": \"{{ $json.query }}\",\n  \"search_depth\": \"advanced\",\n  \"include_answer\": true,\n  \"include_raw_content\": false,\n  \"max_results\": 5\n}",
+                "options": {}
+            },
+            "id": "tavily-research",
+            "name": "🔍 Tavily (Deep)",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                420,
+                160
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.exa.ai/search",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "x-api-key",
+                            "value": "90e746b6-5d42-491d-9e11-d6a4620900a8"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={\n  \"query\": \"{{ $json.query }}\",\n  \"numResults\": 5,\n  \"type\": \"neural\"\n}",
+                "options": {}
+            },
+            "id": "exa-research",
+            "name": "🧠 Exa.ai (Neural)",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                420,
+                320
+            ]
+        },
+        {
+            "parameters": {
+                "method": "GET",
+                "url": "http://searxng:8080/search",
+                "sendQuery": true,
+                "queryParameters": {
+                    "parameters": [
+                        {
+                            "name": "q",
+                            "value": "={{ $json.query }}"
+                        },
+                        {
+                            "name": "format",
+                            "value": "json"
+                        },
+                        {
+                            "name": "engines",
+                            "value": "google,bing,duckduckgo,wikipedia"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "searxng-research",
+            "name": "🌐 SearxNG (Multi)",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                420,
+                480
+            ]
+        },
+        {
+            "parameters": {
+                "mode": "combine",
+                "mergeByFields": {
+                    "values": []
+                },
+                "options": {}
+            },
+            "id": "merge-results",
+            "name": "🔗 Merge Results",
+            "type": "n8n-nodes-base.merge",
+            "typeVersion": 3,
+            "position": [
+                660,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "promptType": "define",
+                "text": "Ты — аналитик-исследователь. Проанализируй результаты поиска из трёх источников и составь структурированный отчёт.\n\n**Результаты Tavily:**\n{{ $json.tavily }}\n\n**Результаты Exa.ai:**\n{{ $json.exa }}\n\n**Результаты SearxNG:**\n{{ $json.searxng }}\n\n**Требования к отчёту:**\n1. Краткое резюме (3-5 предложений)\n2. Ключевые находки (bullet points)\n3. Источники с ссылками\n4. Рекомендации\n\nОтветь структурированным отчётом в Markdown.",
+                "options": {}
+            },
+            "id": "synthesis-agent",
+            "name": "📊 Synthesis Agent",
+            "type": "@n8n/n8n-nodes-langchain.chainLlm",
+            "typeVersion": 1.4,
+            "position": [
+                880,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "modelName": "models/gemini-2.0-flash",
+                "options": {
+                    "maxOutputTokens": 4096
+                }
+            },
+            "id": "gemini-synthesis",
+            "name": "Gemini Flash",
+            "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+            "typeVersion": 1,
+            "position": [
+                880,
+                500
+            ],
+            "credentials": {
+                "googlePalmApi": {
+                    "id": "YOUR_GEMINI_CREDENTIALS_ID",
+                    "name": "Google Gemini API"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "▶️ Start": {
+            "main": [
+                [
+                    {
+                        "node": "📝 Research Query",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "📝 Research Query": {
+            "main": [
+                [
+                    {
+                        "node": "🔍 Tavily (Deep)",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "🧠 Exa.ai (Neural)",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "🌐 SearxNG (Multi)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "🔍 Tavily (Deep)": {
+            "main": [
+                [
+                    {
+                        "node": "🔗 Merge Results",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "🧠 Exa.ai (Neural)": {
+            "main": [
+                [
+                    {
+                        "node": "🔗 Merge Results",
+                        "type": "main",
+                        "index": 1
+                    }
+                ]
+            ]
+        },
+        "🌐 SearxNG (Multi)": {
+            "main": [
+                [
+                    {
+                        "node": "🔗 Merge Results",
+                        "type": "main",
+                        "index": 2
+                    }
+                ]
+            ]
+        },
+        "🔗 Merge Results": {
+            "main": [
+                [
+                    {
+                        "node": "📊 Synthesis Agent",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Gemini Flash": {
+            "ai_languageModel": [
+                [
+                    {
+                        "node": "📊 Synthesis Agent",
+                        "type": "ai_languageModel",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "pinData": {},
+    "settings": {
+        "executionOrder": "v1"
+    }
+}

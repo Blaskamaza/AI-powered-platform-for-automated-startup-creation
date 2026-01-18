@@ -944,3 +944,74 @@ python tools/daily_report.py
 
 ## 📈 Прогресс: V2 Production Ready | XP: +10,000 🎉
 
+---
+
+## 🔧 [2026-01-19] n8n Orchestration Layer
+
+### 🎯 Цель:
+Развертывание n8n как центральной платформы оркестрации AI-агентов с интеграцией бесплатных LLM провайдеров.
+
+### ✅ Выполнено:
+
+#### 1. Docker Stack (n8n + SearxNG + Cloudflare)
+```yaml
+# docker-compose.yml
+services:
+  n8n:        # http://localhost:5678
+  searxng:    # http://localhost:8080 (Unlimited FREE search)
+  cloudflared: # Cloudflare Tunnel
+```
+
+#### 2. Интегрированные API:
+| Provider | Модель | Лимит/день | Назначение |
+|----------|--------|------------|------------|
+| **Groq** | llama-3.1-8b | 14.4K req | Массовые задачи |
+| **Groq** | llama-3.3-70b | 1K req | Сложные задачи |
+| **Tavily** | Search API | 1K/мес | Deep Research |
+| **Exa.ai** | Neural Search | $10 credits | Semantic Search |
+| **SearxNG** | Multi-engine | ∞ | Self-hosted поиск |
+
+#### 3. Созданные воркфлоу:
+```
+n8n-cloudflare/
+├── qualifizer_router_v2.json   # Intent Router + Agents
+├── deep_research_agent.json    # Multi-source research
+├── groq_research_agent.json    # Groq + Tavily pipeline
+└── docker-compose.yml          # Full stack
+```
+
+#### 4. Стратегия экономии LLM:
+```
+90% → Groq FREE (llama-3.1-8b, llama-3.3-70b)
+5%  → Gemini Pro (backup)
+5%  → Vertex AI ($1000 credit, только RAG)
+```
+
+### 📁 Новые файлы:
+```
+n8n-cloudflare/
+├── docker-compose.yml          # Docker stack
+├── .env.example                 # API keys template
+├── config.yml                   # Cloudflare Tunnel config
+├── qualifizer_router_v2.json   # Main router workflow
+├── deep_research_agent.json    # Research workflow
+└── groq_research_agent.json    # Groq + Tavily workflow
+```
+
+### 🚀 Как использовать:
+```bash
+cd n8n-cloudflare
+cp .env.example .env
+# Edit .env with your API keys
+docker-compose up -d
+
+# Access:
+# n8n: http://localhost:5678
+# SearxNG: http://localhost:8080
+```
+
+---
+
+## 📈 Прогресс: n8n Orchestration Ready | XP: +15,000 🚀
+
+

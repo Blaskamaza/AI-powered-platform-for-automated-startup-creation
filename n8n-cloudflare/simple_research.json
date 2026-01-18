@@ -1,0 +1,70 @@
+{
+    "name": "Qualifizer Router v2",
+    "nodes": [
+        {
+            "parameters": {},
+            "id": "start",
+            "name": "Start",
+            "type": "n8n-nodes-base.manualTrigger",
+            "typeVersion": 1,
+            "position": [0, 300]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.tavily.com/search",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={\n  \"api_key\": \"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\",\n  \"query\": \"AI agents for business automation\",\n  \"search_depth\": \"basic\",\n  \"include_answer\": true,\n  \"max_results\": 3\n}"
+            },
+            "id": "tavily",
+            "name": "Tavily Search",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [220, 300]
+        },
+        {
+            "parameters": {
+                "method": "GET",
+                "url": "http://searxng:8080/search",
+                "sendQuery": true,
+                "queryParameters": {
+                    "parameters": [
+                        {"name": "q", "value": "AI agents"},
+                        {"name": "format", "value": "json"}
+                    ]
+                }
+            },
+            "id": "searxng",
+            "name": "SearxNG Search",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [220, 500]
+        },
+        {
+            "parameters": {
+                "jsCode": "// Combine results from Tavily\nconst tavilyData = $input.all();\nreturn [{\n  json: {\n    answer: tavilyData[0]?.json?.answer || 'No answer',\n    results: tavilyData[0]?.json?.results || []\n  }\n}];"
+            },
+            "id": "process",
+            "name": "Process Results",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [440, 300]
+        }
+    ],
+    "connections": {
+        "Start": {
+            "main": [[
+                {"node": "Tavily Search", "type": "main", "index": 0}
+            ]]
+        },
+        "Tavily Search": {
+            "main": [[
+                {"node": "Process Results", "type": "main", "index": 0}
+            ]]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1"
+    }
+}

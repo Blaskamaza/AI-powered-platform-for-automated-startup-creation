@@ -1,0 +1,173 @@
+{
+    "name": "Qualifizer - AI Intent Router",
+    "nodes": [
+        {
+            "parameters": {},
+            "id": "trigger-chat",
+            "name": "Telegram Trigger",
+            "type": "n8n-nodes-base.telegramTrigger",
+            "typeVersion": 1,
+            "position": [
+                0,
+                0
+            ],
+            "webhookId": "telegram-webhook",
+            "credentials": {
+                "telegramApi": {
+                    "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+                    "name": "Telegram account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "promptType": "define",
+                "text": "Ты — главный маршрутизатор (Qualifizer). Твоя цель — понять намерение пользователя и выбрать правильный департамент.\n\nДоступные департаменты:\n1. RESEARCH (Поиск информации, анализ рынка)\n2. COPYWRITING (Написание текстов, постов)\n3. FINANCE (Расчеты, бизнес-планы)\n4. GENERAL (Обычный разговор)\n\nОтветь ТОЛЬКО JSON-объектом:\n{\n  \"intent\": \"RESEARCH\" | \"COPYWRITING\" | \"FINANCE\" | \"GENERAL\",\n  \"reason\": \"почему ты так решил\",\n  \"extracted_task\": \"суть задачи очищенная от приветствий\"\n}\n\nСообщение пользователя: {{ $json.message.text }}",
+                "options": {}
+            },
+            "id": "router-llm",
+            "name": "Intent Router (Gemini)",
+            "type": "@n8n/n8n-nodes-langchain.chainLlm",
+            "typeVersion": 1.4,
+            "position": [
+                220,
+                0
+            ]
+        },
+        {
+            "parameters": {
+                "modelName": "models/gemini-2.0-flash",
+                "options": {
+                    "temperature": 0
+                }
+            },
+            "id": "gemini-model",
+            "name": "Google Gemini Chat Model",
+            "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+            "typeVersion": 1,
+            "position": [
+                220,
+                220
+            ],
+            "credentials": {
+                "googlePalmApi": {
+                    "id": "YOUR_GEMINI_CREDENTIALS_ID",
+                    "name": "Google Gemini Api"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsonParse": true
+            },
+            "id": "json-parser",
+            "name": "Parse JSON",
+            "type": "n8n-nodes-base.jsonParse",
+            "typeVersion": 1,
+            "position": [
+                580,
+                0
+            ]
+        },
+        {
+            "parameters": {
+                "dataType": "string",
+                "value1": "={{ $json.intent }}",
+                "rules": {
+                    "rules": [
+                        {
+                            "value2": "RESEARCH"
+                        },
+                        {
+                            "value2": "COPYWRITING"
+                        },
+                        {
+                            "value2": "FINANCE"
+                        }
+                    ]
+                },
+                "fallbackOutput": 3
+            },
+            "id": "switch-intent",
+            "name": "Switch Department",
+            "type": "n8n-nodes-base.switch",
+            "typeVersion": 3,
+            "position": [
+                800,
+                0
+            ]
+        },
+        {
+            "parameters": {
+                "content": "## 🕵️ Research Agent\nЗдесь будет логика агента-исследователя"
+            },
+            "id": "research-agent",
+            "name": "Research Dept",
+            "type": "n8n-nodes-base.stickyNote",
+            "typeVersion": 1,
+            "position": [
+                1100,
+                -100
+            ]
+        },
+        {
+            "parameters": {
+                "content": "## ✍️ Copywriter Agent\nЗдесь будет логика агента-копирайтера"
+            },
+            "id": "copy-agent",
+            "name": "Copywriting Dept",
+            "type": "n8n-nodes-base.stickyNote",
+            "typeVersion": 1,
+            "position": [
+                1100,
+                100
+            ]
+        }
+    ],
+    "connections": {
+        "Telegram Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Intent Router (Gemini)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Google Gemini Chat Model": {
+            "ai_languageModel": [
+                [
+                    {
+                        "node": "Intent Router (Gemini)",
+                        "type": "ai_languageModel",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Intent Router (Gemini)": {
+            "main": [
+                [
+                    {
+                        "node": "Parse JSON",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Parse JSON": {
+            "main": [
+                [
+                    {
+                        "node": "Switch Department",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

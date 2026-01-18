@@ -1,0 +1,7 @@
+tunnel: 5f693494-7dbf-434a-8a87-ce91d5eeda75
+credentials-file: C:\Users\user\.cloudflared\5f693494-7dbf-434a-8a87-ce91d5eeda75.json
+
+ingress:
+  - hostname: n8n.misargyridessss.com
+    service: http://localhost:5678
+  - service: http_status:404

@@ -1,0 +1,398 @@
+{
+    "name": "🧠 Qualifizer Router v2 (Multi-Search)",
+    "nodes": [
+        {
+            "parameters": {
+                "updates": [
+                    "message"
+                ]
+            },
+            "id": "telegram-trigger",
+            "name": "📱 Telegram Trigger",
+            "type": "n8n-nodes-base.telegramTrigger",
+            "typeVersion": 1.1,
+            "position": [
+                0,
+                300
+            ],
+            "webhookId": "telegram-qualifizer",
+            "credentials": {
+                "telegramApi": {
+                    "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+                    "name": "Telegram Bot"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "promptType": "define",
+                "text": "Ты — главный маршрутизатор AI-агентов (Qualifizer). Твоя цель — понять намерение пользователя и выбрать правильный департамент.\n\nДоступные департаменты:\n1. RESEARCH — Поиск информации, анализ рынка, исследования\n2. CONTENT — Написание постов, статей, копирайтинг\n3. CODE — Написание кода, отладка, техническая помощь\n4. GENERAL — Обычный разговор, вопросы\n\nОтветь ТОЛЬКО JSON-объектом (без markdown):\n{\n  \"intent\": \"RESEARCH\" | \"CONTENT\" | \"CODE\" | \"GENERAL\",\n  \"reason\": \"почему ты так решил\",\n  \"search_query\": \"поисковый запрос если нужен поиск, иначе null\",\n  \"task\": \"очищенная суть задачи\"\n}\n\nСообщение пользователя: {{ $json.message.text }}",
+                "options": {
+                    "temperature": 0
+                }
+            },
+            "id": "intent-router",
+            "name": "🎯 Intent Router",
+            "type": "@n8n/n8n-nodes-langchain.chainLlm",
+            "typeVersion": 1.4,
+            "position": [
+                220,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "modelName": "models/gemini-2.0-flash",
+                "options": {
+                    "temperature": 0
+                }
+            },
+            "id": "gemini-router",
+            "name": "Gemini Flash",
+            "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+            "typeVersion": 1,
+            "position": [
+                220,
+                520
+            ],
+            "credentials": {
+                "googlePalmApi": {
+                    "id": "YOUR_GEMINI_CREDENTIALS_ID",
+                    "name": "Google Gemini API"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "// Parse LLM response to JSON\nconst text = $input.first().json.text || $input.first().json.response;\n\n// Extract JSON from response\nlet jsonStr = text;\nif (text.includes('{')) {\n  jsonStr = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);\n}\n\ntry {\n  const parsed = JSON.parse(jsonStr);\n  return [{ json: parsed }];\n} catch (e) {\n  return [{ json: { intent: 'GENERAL', reason: 'Parse error', search_query: null, task: text } }];\n}"
+            },
+            "id": "json-parser",
+            "name": "📋 Parse JSON",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                440,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "dataType": "string",
+                "value1": "={{ $json.intent }}",
+                "rules": {
+                    "rules": [
+                        {
+                            "value2": "RESEARCH",
+                            "output": 0
+                        },
+                        {
+                            "value2": "CONTENT",
+                            "output": 1
+                        },
+                        {
+                            "value2": "CODE",
+                            "output": 2
+                        }
+                    ]
+                },
+                "fallbackOutput": "extra"
+            },
+            "id": "switch-department",
+            "name": "🔀 Switch Department",
+            "type": "n8n-nodes-base.switch",
+            "typeVersion": 3,
+            "position": [
+                660,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.tavily.com/search",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={\n  \"api_key\": \"YOUR_TAVILY_API_KEY\",\n  \"query\": \"{{ $json.search_query || $json.task }}\",\n  \"search_depth\": \"advanced\",\n  \"include_answer\": true,\n  \"max_results\": 5\n}",
+                "options": {}
+            },
+            "id": "tavily-search",
+            "name": "🔍 Tavily Search",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                900,
+                100
+            ]
+        },
+        {
+            "parameters": {
+                "method": "GET",
+                "url": "http://searxng:8080/search",
+                "sendQuery": true,
+                "queryParameters": {
+                    "parameters": [
+                        {
+                            "name": "q",
+                            "value": "={{ $json.search_query || $json.task }}"
+                        },
+                        {
+                            "name": "format",
+                            "value": "json"
+                        },
+                        {
+                            "name": "language",
+                            "value": "ru"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "searxng-search",
+            "name": "🔍 SearxNG (Backup)",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                900,
+                260
+            ]
+        },
+        {
+            "parameters": {
+                "promptType": "define",
+                "text": "Ты — контент-менеджер. Напиши пост для социальных сетей на тему:\n\n{{ $json.task }}\n\nТребования:\n- Захватывающий заголовок\n- 3-5 абзацев\n- Эмодзи для акцентов\n- Call-to-action в конце\n\nОтветь готовым постом.",
+                "options": {}
+            },
+            "id": "content-agent",
+            "name": "✍️ Content Agent",
+            "type": "@n8n/n8n-nodes-langchain.chainLlm",
+            "typeVersion": 1.4,
+            "position": [
+                900,
+                420
+            ]
+        },
+        {
+            "parameters": {
+                "promptType": "define",
+                "text": "Ты — Senior Developer. Помоги с задачей:\n\n{{ $json.task }}\n\nТребования:\n- Пиши чистый, читаемый код\n- Добавь комментарии\n- Используй best practices\n\nОтветь кодом с объяснением.",
+                "options": {}
+            },
+            "id": "code-agent",
+            "name": "💻 Code Agent",
+            "type": "@n8n/n8n-nodes-langchain.chainLlm",
+            "typeVersion": 1.4,
+            "position": [
+                900,
+                580
+            ]
+        },
+        {
+            "parameters": {
+                "chatId": "={{ $('📱 Telegram Trigger').item.json.message.chat.id }}",
+                "text": "=🤖 **Qualifizer Response**\n\n{{ $json.text || $json.answer || $json.response || JSON.stringify($json) }}"
+            },
+            "id": "telegram-reply",
+            "name": "📤 Send Reply",
+            "type": "n8n-nodes-base.telegram",
+            "typeVersion": 1.2,
+            "position": [
+                1200,
+                300
+            ],
+            "credentials": {
+                "telegramApi": {
+                    "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+                    "name": "Telegram Bot"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "modelName": "models/gemini-2.0-flash",
+                "options": {}
+            },
+            "id": "gemini-content",
+            "name": "Gemini (Content)",
+            "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+            "typeVersion": 1,
+            "position": [
+                900,
+                620
+            ],
+            "credentials": {
+                "googlePalmApi": {
+                    "id": "YOUR_GEMINI_CREDENTIALS_ID",
+                    "name": "Google Gemini API"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "modelName": "models/gemini-2.0-flash",
+                "options": {}
+            },
+            "id": "gemini-code",
+            "name": "Gemini (Code)",
+            "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+            "typeVersion": 1,
+            "position": [
+                900,
+                780
+            ],
+            "credentials": {
+                "googlePalmApi": {
+                    "id": "YOUR_GEMINI_CREDENTIALS_ID",
+                    "name": "Google Gemini API"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "📱 Telegram Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "🎯 Intent Router",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Gemini Flash": {
+            "ai_languageModel": [
+                [
+                    {
+                        "node": "🎯 Intent Router",
+                        "type": "ai_languageModel",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "🎯 Intent Router": {
+            "main": [
+                [
+                    {
+                        "node": "📋 Parse JSON",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "📋 Parse JSON": {
+            "main": [
+                [
+                    {
+                        "node": "🔀 Switch Department",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "🔀 Switch Department": {
+            "main": [
+                [
+                    {
+                        "node": "🔍 Tavily Search",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "✍️ Content Agent",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "💻 Code Agent",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "📤 Send Reply",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "🔍 Tavily Search": {
+            "main": [
+                [
+                    {
+                        "node": "📤 Send Reply",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "🔍 SearxNG (Backup)": {
+            "main": [
+                [
+                    {
+                        "node": "📤 Send Reply",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "✍️ Content Agent": {
+            "main": [
+                [
+                    {
+                        "node": "📤 Send Reply",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "💻 Code Agent": {
+            "main": [
+                [
+                    {
+                        "node": "📤 Send Reply",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Gemini (Content)": {
+            "ai_languageModel": [
+                [
+                    {
+                        "node": "✍️ Content Agent",
+                        "type": "ai_languageModel",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Gemini (Code)": {
+            "ai_languageModel": [
+                [
+                    {
+                        "node": "💻 Code Agent",
+                        "type": "ai_languageModel",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "pinData": {},
+    "settings": {
+        "executionOrder": "v1"
+    }
+}
