@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run:*)",
+      "Bash(npm install:*)",
+      "Bash(npm search:*)",
+      "Bash(npm view:*)",
+      "Bash(python:*)",
+      "Bash(pip install:*)",
+      "Bash(git:*)",
+      "Bash(curl:*)",
+      "Bash(docker:*)",
+      "Bash(npx:*)",
+      "Bash(ls:*)",
+      "Bash(mkdir:*)",
+      "Bash(cp:*)",
+      "Bash(mv:*)",
+      "Bash(rm:*)",
+      "Bash(findstr:*)"
+    ]
+  }
+}
